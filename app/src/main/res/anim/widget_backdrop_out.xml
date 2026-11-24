@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  widget_backdrop_out.xml — Crossfade de saída do backdrop (capa de fundo) ao trocar de música.
+  Duração: 400ms (fade suave sem deslocamento)
+-->
+<alpha xmlns:android="http://schemas.android.com/apk/res/android"
+    android:fromAlpha="1.0"
+    android:toAlpha="0.0"
+    android:duration="400"
+    android:interpolator="@android:interpolator/accelerate_cubic" />

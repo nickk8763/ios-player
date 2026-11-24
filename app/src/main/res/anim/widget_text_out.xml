@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  widget_text_out.xml — Animação de saída do texto de título/artista (slide para cima + fade).
+  Referência: LockScreenPlayerCard.kt:127-129
+    fadeOut(TextTransitionSpring) + slideOut(TextSlideSpring) { IntOffset(0, -20dp) }
+    slide subindo (y=0 → y−20dp)
+  Duração: ~500ms (stiffness=120 → tempo de assentamento ~0.5s)
+-->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@android:interpolator/accelerate_cubic">
+    <alpha
+        android:fromAlpha="1.0"
+        android:toAlpha="0.0"
+        android:duration="380" />
+    <translate
+        android:fromYDelta="0dp"
+        android:toYDelta="-20dp"
+        android:duration="380" />
+</set>

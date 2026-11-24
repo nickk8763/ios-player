@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  widget_backdrop_in.xml — Crossfade de entrada do backdrop (capa de fundo) ao trocar de música.
+  Duração: 400ms (fade suave sem deslocamento)
+-->
+<alpha xmlns:android="http://schemas.android.com/apk/res/android"
+    android:fromAlpha="0.0"
+    android:toAlpha="1.0"
+    android:duration="400"
+    android:interpolator="@android:interpolator/decelerate_cubic" />

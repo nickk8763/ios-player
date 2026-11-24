@@ -1,0 +1,61 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Lets us read the label of, and launch, the app that owns a media session (package visibility). -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.IosGlassPlayer">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Enabling this listener in Settings is what authorizes MediaSessionManager.getActiveSessions(). -->
+        <service
+            android:name=".media.MediaAccessService"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <receiver android:name=".widget.PlayerWidgetProvider" android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/player_widget_info" />
+        </receiver>
+        <!--
+            exported="true" é necessário para que o launcher (processo externo) consiga
+            entregar os PendingIntent.getBroadcast() de controle do widget.
+            As actions são específicas do app (com.nickk.iosglassplayer.action.*),
+            portanto não representam superfície de ataque adicional.
+        -->
+        <receiver android:name=".widget.MediaControlReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="com.nickk.iosglassplayer.action.PREVIOUS" />
+                <action android:name="com.nickk.iosglassplayer.action.PLAY_PAUSE" />
+                <action android:name="com.nickk.iosglassplayer.action.NEXT" />
+                <action android:name="com.nickk.iosglassplayer.action.FAVORITE" />
+                <action android:name="com.nickk.iosglassplayer.action.OPEN_SOURCE" />
+                <action android:name="com.nickk.iosglassplayer.action.SEEK" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

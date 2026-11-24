@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Manifest de debug: registra WidgetPreviewActivity apenas no build debug.
+  NÃO toca no manifest de main.
+  Lançar via: adb shell am start -n com.nickk.iosglassplayer/.WidgetPreviewActivity
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity
+            android:name=".WidgetPreviewActivity"
+            android:exported="true"
+            android:label="Widget Preview"
+            android:theme="@style/Theme.IosGlassPlayer" />
+    </application>
+</manifest>

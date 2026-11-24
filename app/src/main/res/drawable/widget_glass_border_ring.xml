@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  widget_glass_border_ring.xml — Anel vetorial de borda em gradiente (Etapa W3).
+  Referência: GlassSurfaceV1.kt:23-36, CardSpec.kt:75-78.
+
+  Geometria:
+    - Retângulo externo: 352 × 144 dp, raio de canto = 22 dp (CardSpec.CardCornerRadius).
+    - Retângulo interno: inset de 1 dp (350 × 142 dp), raio de canto = 21 dp.
+    - fillType="evenOdd" preenche estritamente o anel perimetral de 1 dp, deixando o miolo oco.
+    - Gradiente linear diagonal de (0,0) a (352,144):
+        offset 0.0: 55% branco (#8CFFFFFF) [CardSpec.GlassV1BorderTopLeftAlpha]
+        offset 0.5: 10% branco (#1AFFFFFF) [CardSpec.GlassV1BorderCenterAlpha]
+        offset 1.0: 35% branco (#59FFFFFF) [CardSpec.GlassV1BorderBottomRightAlpha]
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="352dp"
+    android:height="144dp"
+    android:viewportWidth="352"
+    android:viewportHeight="144">
+    <path
+        android:fillType="evenOdd"
+        android:pathData="M 22,0 L 330,0 A 22,22 0 0,1 352,22 L 352,122 A 22,22 0 0,1 330,144 L 22,144 A 22,22 0 0,1 0,122 L 0,22 A 22,22 0 0,1 22,0 Z M 22,1 L 330,1 A 21,21 0 0,1 351,22 L 351,122 A 21,21 0 0,1 330,143 L 22,143 A 21,21 0 0,1 1,122 L 1,22 A 21,21 0 0,1 22,1 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0"
+                android:startY="0"
+                android:endX="352"
+                android:endY="144">
+                <item android:offset="0.0" android:color="#8CFFFFFF" />
+                <item android:offset="0.5" android:color="#1AFFFFFF" />
+                <item android:offset="1.0" android:color="#59FFFFFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">iOS Glass Player</string>
+    <string name="widget_description">Music controls with an iOS-inspired glass look</string>
+    <string name="nothing_playing">Nothing playing</string>
+    <string name="start_music">Start music in any app</string>
+    <string name="now_playing">NOW PLAYING</string>
+    <string name="connect_music">Connect your music</string>
+    <string name="connect_music_body">Enable notification access so Android lets this app read active media sessions.</string>
+    <string name="enable_media_access">Enable media access</string>
+    <string name="no_session_toast">No active media session</string>
+    <string name="open_app_failed">Could not open the music app</string>
+    <string name="previous">Previous track</string>
+    <string name="next">Next track</string>
+    <string name="rewind">Rewind</string>
+    <string name="forward">Fast forward</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="star">Favorite</string>
+    <string name="output_device">Audio output</string>
+    <string name="waveform">Playing indicator</string>
+    <string name="playback_progress">Playback progress</string>
+    <string name="album_artwork">Album artwork</string>
+    <string name="open_source_app">Open source app</string>
+</resources>

@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="15dp"
+    android:viewportWidth="20"
+    android:viewportHeight="15">
+    <!-- Bar 1 (height 10.68) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 2.00,2.16 C 2.66,2.16 3.20,2.70 3.20,3.36 L 3.20,11.64 C 3.20,12.30 2.66,12.84 2.00,12.84 C 1.34,12.84 0.80,12.30 0.80,11.64 L 0.80,3.36 C 0.80,2.70 1.34,2.16 2.00,2.16 Z" />
+    <!-- Bar 2 (height 12.13) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 6.00,1.44 C 6.66,1.44 7.20,1.98 7.20,2.64 L 7.20,12.36 C 7.20,13.02 6.66,13.56 6.00,13.56 C 5.34,13.56 4.80,13.02 4.80,12.36 L 4.80,2.64 C 4.80,1.98 5.34,1.44 6.00,1.44 Z" />
+    <!-- Bar 3 (height 3.53) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 10.00,5.74 C 10.66,5.74 11.20,6.28 11.20,6.94 L 11.20,8.06 C 11.20,8.72 10.66,9.26 10.00,9.26 C 9.34,9.26 8.80,8.72 8.80,8.06 L 8.80,6.94 C 8.80,6.28 9.34,5.74 10.00,5.74 Z" />
+    <!-- Bar 4 (height 14.99) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 14.00,0.00 C 14.66,0.00 15.20,0.54 15.20,1.20 L 15.20,13.80 C 15.20,14.46 14.66,15.00 14.00,15.00 C 13.34,15.00 12.80,14.46 12.80,13.80 L 12.80,1.20 C 12.80,0.54 13.34,0.00 14.00,0.00 Z" />
+    <!-- Bar 5 (height 3.13) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 18.00,5.94 C 18.66,5.94 19.20,6.48 19.20,7.14 L 19.20,7.86 C 19.20,8.52 18.66,9.06 18.00,9.06 C 17.34,9.06 16.80,8.52 16.80,7.86 L 16.80,7.14 C 16.80,6.48 17.34,5.94 18.00,5.94 Z" />
+</vector>

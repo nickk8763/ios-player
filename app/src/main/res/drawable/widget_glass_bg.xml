@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  widget_glass_bg.xml — Fundo de superfície de vidro do widget (Etapa W3).
+  Referência: GlassSurfaceV1.kt:23-36, CardSpec.kt:74-78.
+
+  Combinação obrigatória em layer-list:
+    1. Preenchimento branco com 14% de opacidade (#24FFFFFF) e raio de 22dp.
+    2. Anel vetorial em gradiente diagonal por cima (widget_glass_border_ring.xml).
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="22dp" />
+            <solid android:color="#24FFFFFF" />
+        </shape>
+    </item>
+    <item android:drawable="@drawable/widget_glass_border_ring" />
+</layer-list>

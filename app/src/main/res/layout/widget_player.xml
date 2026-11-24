@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  widget_player.xml — Layout do widget home screen (Etapa W5).
+  Referência: CardSpec.kt, LockScreenPlayerCard.kt, GlassSurfaceV1.kt, PlaybackProgress.kt, PlayerScreen.kt.
+
+  Estrutura de camadas:
+    1. widget_backdrop_flipper (ViewFlipper) — 2 ImageViews para crossfade do fundo (MODO B).
+    2. widget_glass_overlay (ImageView) — Vidro 14% branco (#24FFFFFF) + borda vetorial em gradiente POR CIMA.
+    3. widget_title_flipper (ViewFlipper) — 2 TextViews A/B com fade+slide ao trocar de música.
+    4. widget_artist_flipper (ViewFlipper) — 2 TextViews A/B com fade+slide ao trocar de artista.
+    5. widget_waveform (ImageView) — Ícone de waveform (centerY=27dp, marginEnd=26dp).
+    6. widget_progress_row (LinearLayout) — Linha de progresso com tempos em TextView e barra (centerY=67dp).
+    7. widget_seek_overlay (FrameLayout) — 5 ImageButtons invisíveis para toque de seek na barra.
+    8. widget_controls (FrameLayout) — 5 botões posicionados em porcentagem via setViewLayoutMargin (centerY=108dp).
+
+  Animações (itens A e B):
+    Play/Pause: widget_play_flipper com inAnimation=widget_control_in, outAnimation=widget_control_out (220ms, escala 0.8→1.0 + fade)
+    Título/Artista: ViewFlippers com inAnimation=widget_text_in, outAnimation=widget_text_out (400ms, slide 20dp + fade)
+    Backdrop: widget_backdrop_flipper com inAnimation=widget_backdrop_in, outAnimation=widget_backdrop_out (400ms, crossfade)
+
+  Seek overlay (item D):
+    5 ImageButtons invisíveis sobrepostos à barra (IDs: widget_seek_0..4).
+    Frações centrais: 10%, 30%, 50%, 70%, 90% → cobrem cada 20% da barra.
+    PendingIntents definidos em PlayerWidgetProvider para ACTION_SEEK com extra SEEK_FRACTION.
+    NOTA: arrastar a barra é IMPOSSÍVEL em RemoteViews — sem suporte a MotionEvent.ACTION_MOVE.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="144dp">
+
+    <!-- Camada 1: Backdrop crossfade (MODO B): 2 ImageViews alternados por ViewFlipper -->
+    <ViewFlipper
+        android:id="@+id/widget_backdrop_flipper"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:animateFirstView="false"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/widget_backdrop_a"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitXY" />
+
+        <ImageView
+            android:id="@+id/widget_backdrop_b"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitXY" />
+    </ViewFlipper>
+
+    <!-- Camada 2: Vidro 14% branco + borda vetorial em gradiente POR CIMA -->
+    <ImageView
+        android:id="@+id/widget_glass_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/widget_glass_bg" />
+
+    <!--
+      Título — CardSpec.kt:17-20
+        fontSize=16.5sp, SemiBold, white alpha=1.0 (#FFFFFFFF)
+        centerY=25dp → height=44dp, marginTop=3dp → range [3..47dp], center=25dp
+        paddingH=56dp (CardSpec.kt:19)
+        Usa ViewFlipper A/B para animação de troca de música (slide 20dp + fade, 400ms)
+        W6 Plano B: ImageView em vez de TextView — bitmap renderizado via Canvas/Typeface Inter
+        para garantir a fonte mesmo no launcher OneUI que substitui fontFamily de apps terceiros.
+    -->
+    <ImageView
+        android:id="@+id/widget_title"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="3dp"
+        android:scaleType="center" />
+
+    <ImageView
+        android:id="@+id/widget_artist"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="25dp"
+        android:scaleType="center" />
+
+    <!--
+      Waveform — CardSpec.kt:29-33 & LockScreenPlayerCard.kt:351-493
+        width=20dp, height=15dp, marginEnd=26dp, centerY=27dp
+        marginTop = 27 - 15/2 = 19.5dp
+        alpha=0.95 (#F2FFFFFF)
+        - widget_waveform: Exibe as 5 barras em repouso (ic_waveform) quando pausado/buffering
+        - widget_waveform_flipper: ViewFlipper nativo de 250ms com os 6 quadros harmônicos durante reprodução ativa
+    -->
+    <ImageView
+        android:id="@+id/widget_waveform"
+        android:layout_width="20dp"
+        android:layout_height="15dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="19.5dp"
+        android:layout_marginEnd="26dp"
+        android:src="@drawable/ic_waveform"
+        android:contentDescription="@string/waveform"
+        android:visibility="gone" />
+
+    <ViewFlipper
+        android:id="@+id/widget_waveform_flipper"
+        android:layout_width="20dp"
+        android:layout_height="15dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="19.5dp"
+        android:layout_marginEnd="26dp"
+        android:autoStart="true"
+        android:flipInterval="40"
+        android:alpha="0.95"
+        android:visibility="gone">
+
+        <ImageView android:id="@+id/widget_wf_1" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_1" />
+        <ImageView android:id="@+id/widget_wf_2" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_2" />
+        <ImageView android:id="@+id/widget_wf_3" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_3" />
+        <ImageView android:id="@+id/widget_wf_4" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_4" />
+        <ImageView android:id="@+id/widget_wf_5" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_5" />
+        <ImageView android:id="@+id/widget_wf_6" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_6" />
+        <ImageView android:id="@+id/widget_wf_7" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_7" />
+        <ImageView android:id="@+id/widget_wf_8" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_8" />
+        <ImageView android:id="@+id/widget_wf_9" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_9" />
+        <ImageView android:id="@+id/widget_wf_10" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_10" />
+        <ImageView android:id="@+id/widget_wf_11" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_11" />
+        <ImageView android:id="@+id/widget_wf_12" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_12" />
+        <ImageView android:id="@+id/widget_wf_13" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_13" />
+        <ImageView android:id="@+id/widget_wf_14" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_14" />
+        <ImageView android:id="@+id/widget_wf_15" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_15" />
+        <ImageView android:id="@+id/widget_wf_16" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_16" />
+        <ImageView android:id="@+id/widget_wf_17" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_17" />
+        <ImageView android:id="@+id/widget_wf_18" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_18" />
+        <ImageView android:id="@+id/widget_wf_19" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_19" />
+        <ImageView android:id="@+id/widget_wf_20" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_20" />
+        <ImageView android:id="@+id/widget_wf_21" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_21" />
+        <ImageView android:id="@+id/widget_wf_22" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_22" />
+        <ImageView android:id="@+id/widget_wf_23" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_23" />
+        <ImageView android:id="@+id/widget_wf_24" android:layout_width="match_parent" android:layout_height="match_parent" android:src="@drawable/ic_waveform_anim_24" />
+    </ViewFlipper>
+
+    <!--
+      Progress Row — CardSpec.kt:36-47
+        centerY=67dp, height=28dp, marginTop = 67 - 28/2 = 53dp
+        paddingH=22dp (CardSpec.kt:37)
+        gap=9dp (CardSpec.kt:38)
+        BarHeight=6dp, trilho alpha=0.30 (#4DFFFFFF), preenchimento alpha=0.95 (#F2FFFFFF)
+    -->
+    <LinearLayout
+        android:id="@+id/widget_progress_row"
+        android:layout_width="match_parent"
+        android:layout_height="28dp"
+        android:layout_gravity="top"
+        android:layout_marginTop="53dp"
+        android:layout_marginStart="22dp"
+        android:layout_marginEnd="22dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- Elapsed time (TextView, formato %d:%02d, CardSpec.TimeFontSize=11.5sp, TimeAlpha=0.85 -> #D9FFFFFF) -->
+        <TextView
+            android:id="@+id/widget_elapsed"
+            android:layout_width="38dp"
+            android:layout_height="match_parent"
+            android:gravity="start|center_vertical"
+            android:fontFamily="@font/inter_semibold"
+            android:includeFontPadding="false"
+            android:text="0:00"
+            android:textColor="#D9FFFFFF"
+            android:textSize="11.5sp"
+            android:maxLines="1" />
+
+        <!-- Gap 9dp -->
+        <FrameLayout
+            android:layout_width="9dp"
+            android:layout_height="match_parent" />
+
+        <!-- ProgressBar (altura 6dp, BarHeight=6dp, CardSpec.kt:41) -->
+        <ProgressBar
+            android:id="@+id/widget_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="0dp"
+            android:layout_height="6dp"
+            android:layout_weight="1"
+            android:max="1000"
+            android:progress="0"
+            android:indeterminate="false"
+            android:progressDrawable="@drawable/widget_progress" />
+
+        <!-- Gap 9dp -->
+        <FrameLayout
+            android:layout_width="9dp"
+            android:layout_height="match_parent" />
+
+        <!-- Remaining time (TextView, formato −%d:%02d, U+2212) -->
+        <TextView
+            android:id="@+id/widget_remaining"
+            android:layout_width="42dp"
+            android:layout_height="match_parent"
+            android:gravity="end|center_vertical"
+            android:fontFamily="@font/inter_semibold"
+            android:includeFontPadding="false"
+            android:text="--:--"
+            android:textColor="#D9FFFFFF"
+            android:textSize="11.5sp"
+            android:maxLines="1" />
+    </LinearLayout>
+
+    <!--
+      Seek Overlay — Item D (W5)
+        5 ImageButtons invisíveis sobrepostos à barra de progresso.
+        Posição: mesma margem horizontal da progress row (22dp cada lado).
+        Altura: 28dp (altura total da progress row para facilitar o toque).
+        Frações centrais: 10%, 30%, 50%, 70%, 90% → cobrem cada 20% da barra.
+        alpha=0: completamente invisíveis para o usuário.
+        LinearLayout (horizontal) usado para weight funcionar.
+        NOTA: arrastar NÃO é possível em RemoteViews (sem suporte a MotionEvent.ACTION_MOVE).
+    -->
+    <LinearLayout
+        android:id="@+id/widget_seek_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="28dp"
+        android:layout_gravity="top"
+        android:layout_marginTop="53dp"
+        android:layout_marginStart="22dp"
+        android:layout_marginEnd="22dp"
+        android:orientation="horizontal">
+
+        <!-- Seek 0–20% → fração central 10% -->
+        <ImageButton
+            android:id="@+id/widget_seek_0"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@null"
+            android:src="@null"
+            android:alpha="0" />
+
+        <!-- Seek 20–40% → fração central 30% -->
+        <ImageButton
+            android:id="@+id/widget_seek_1"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@null"
+            android:src="@null"
+            android:alpha="0" />
+
+        <!-- Seek 40–60% → fração central 50% -->
+        <ImageButton
+            android:id="@+id/widget_seek_2"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@null"
+            android:src="@null"
+            android:alpha="0" />
+
+        <!-- Seek 60–80% → fração central 70% -->
+        <ImageButton
+            android:id="@+id/widget_seek_3"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@null"
+            android:src="@null"
+            android:alpha="0" />
+
+        <!-- Seek 80–100% → fração central 90% -->
+        <ImageButton
+            android:id="@+id/widget_seek_4"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@null"
+            android:src="@null"
+            android:alpha="0" />
+    </LinearLayout>
+
+    <!--
+      Controls Row — CardSpec.kt:49-67
+        centerY=108dp, height=48dp, marginTop = 108 - 48/2 = 84dp
+        5 botões posicionados dinamicamente em FrameLayout via setViewLayoutMargin
+        Frações CardSpec: 9% (Star), 29.5% (Previous), 50% (Play via ViewFlipper), 70.5% (Next), 91% (OpenSource).
+        Margins padrão calculadas para largura base de 334.58dp (grade 4x2 do Launcher):
+          Star:       334.58 * 0.090 - 24 = 6.1dp
+          Previous:   334.58 * 0.295 - 24 = 74.7dp
+          Play:       334.58 * 0.500 - 24 = 143.3dp
+          Next:       334.58 * 0.705 - 24 = 211.9dp
+          OpenSource: 334.58 * 0.910 - 24 = 280.5dp
+    -->
+    <FrameLayout
+        android:id="@+id/widget_controls"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_gravity="top"
+        android:layout_marginTop="84dp">
+
+        <ImageButton
+            android:id="@+id/widget_star"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="top|start"
+            android:layout_marginStart="6.1dp"
+            android:background="@null"
+            android:scaleType="center"
+            android:padding="0dp"
+            android:src="@drawable/ic_star_outline"
+            android:contentDescription="@string/star" />
+
+        <ImageButton
+            android:id="@+id/widget_previous"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="top|start"
+            android:layout_marginStart="74.7dp"
+            android:background="@null"
+            android:scaleType="center"
+            android:padding="0dp"
+            android:src="@drawable/ic_rewind"
+            android:contentDescription="@string/previous" />
+
+        <!--
+          Play/Pause — Item A (W5): ViewFlipper com 2 ImageViews.
+          Filho 0 = ic_play (estado pausado/sem sessão)
+          Filho 1 = ic_pause (estado tocando)
+          Animação: fade (220ms) + escala 0.8→1.0 (entrada) / 1.0→0.8 (saída)
+          Referência: LockScreenPlayerCard.kt:707-721 (AnimatedContent + scaleIn/scaleOut 0.8f)
+          setDisplayedChild(0) = play, setDisplayedChild(1) = pause
+        -->
+        <ImageButton
+            android:id="@+id/widget_play"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="top|start"
+            android:layout_marginStart="143.3dp"
+            android:background="@null"
+            android:scaleType="center"
+            android:padding="0dp"
+            android:src="@drawable/ic_play"
+            android:contentDescription="@string/play" />
+
+        <ImageButton
+            android:id="@+id/widget_next"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="top|start"
+            android:layout_marginStart="211.9dp"
+            android:background="@null"
+            android:scaleType="center"
+            android:padding="0dp"
+            android:src="@drawable/ic_forward"
+            android:contentDescription="@string/next" />
+
+        <ImageButton
+            android:id="@+id/widget_open_source"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="top|start"
+            android:layout_marginStart="280.5dp"
+            android:background="@null"
+            android:scaleType="center"
+            android:padding="0dp"
+            android:src="@drawable/ic_open_source_app_widget"
+            android:contentDescription="@string/open_source_app" />
+    </FrameLayout>
+
+</FrameLayout>
