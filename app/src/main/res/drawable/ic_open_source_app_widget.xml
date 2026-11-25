@@ -1,19 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="20dp"
-    android:height="20dp"
-    android:viewportWidth="32"
-    android:viewportHeight="32">
+    android:width="22dp"
+    android:height="22dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- SF Symbols 'airpods' audio output glyph matching iOS 26 reference -->
     <path
-        android:pathData="M13,4 H9 A5,5 0 0 0 4,9 V23 A5,5 0 0 0 9,28 H23 A5,5 0 0 0 28,23 V19"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="2.9"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
-    <path
-        android:pathData="M14.5,17.5 L27,5 M18.5,5 H27 V13.5"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="2.9"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M 6.8,4.0 C 4.3,4.0 2.6,5.7 2.6,8.0 C 2.6,10.0 4.0,11.6 6.0,11.9 L 7.6,11.9 L 7.6,19.1 C 7.6,19.8 8.2,20.3 8.9,20.3 C 9.6,20.3 10.1,19.8 10.1,19.1 L 10.1,7.5 C 10.1,5.4 8.7,4.0 6.8,4.0 Z M 5.2,7.2 A 1.0,1.0 0 1,1 5.2,9.2 A 1.0,1.0 0 1,1 5.2,7.2 Z M 8.0,6.4 C 8.4,6.4 8.7,6.7 8.7,7.1 L 8.7,8.7 C 8.7,9.1 8.4,9.4 8.0,9.4 C 7.6,9.4 7.3,9.1 7.3,8.7 L 7.3,7.1 C 7.3,6.7 7.6,6.4 8.0,6.4 Z M 17.2,4.0 C 15.3,4.0 13.9,5.4 13.9,7.5 L 13.9,19.1 C 13.9,19.8 14.4,20.3 15.1,20.3 C 15.8,20.3 16.4,19.8 16.4,19.1 L 16.4,11.9 L 18.0,11.9 C 20.0,11.6 21.4,10.0 21.4,8.0 C 21.4,5.7 19.7,4.0 17.2,4.0 Z M 18.8,7.2 A 1.0,1.0 0 1,1 18.8,9.2 A 1.0,1.0 0 1,1 18.8,7.2 Z M 16.0,6.4 C 16.4,6.4 16.7,6.7 16.7,7.1 L 16.7,8.7 C 16.7,9.1 16.4,9.4 16.0,9.4 C 15.6,9.4 15.3,9.1 15.3,8.7 L 15.3,7.1 C 15.3,6.7 15.6,6.4 16.0,6.4 Z" />
 </vector>

@@ -1,1 +1,10 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="28dp" android:height="28dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFFFFFFF" android:pathData="M8,5v14l11,-7z"/></vector>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="25dp"
+    android:height="29dp"
+    android:viewportWidth="25"
+    android:viewportHeight="29">
+    <!-- SF Symbols 'play.fill': smoothly rounded vertices -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 3.0,4.6 L 3.0,24.4 Q 3.0,27.0 5.3,25.7 L 21.4,15.8 Q 23.7,14.5 21.4,13.2 L 5.3,3.3 Q 3.0,2.0 3.0,4.6 Z" />
+</vector>

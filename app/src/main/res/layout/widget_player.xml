@@ -27,7 +27,8 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
-    android:layout_height="144dp">
+    android:layout_height="144dp"
+    android:background="@drawable/widget_root_outline">
 
     <!-- Camada 1: Backdrop crossfade (MODO B): 2 ImageViews alternados por ViewFlipper -->
     <ViewFlipper
@@ -50,12 +51,13 @@
             android:scaleType="fitXY" />
     </ViewFlipper>
 
-    <!-- Camada 2: Vidro 14% branco + borda vetorial em gradiente POR CIMA -->
+    <!-- Camada 2: Clear Liquid Glass overlay — bitmap renderizado pelo PlayerWidgetProvider -->
     <ImageView
         android:id="@+id/widget_glass_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@drawable/widget_glass_bg" />
+        android:src="@drawable/widget_glass_bg"
+        android:scaleType="fitXY" />
 
     <!--
       Título — CardSpec.kt:17-20
@@ -77,9 +79,9 @@
     <ImageView
         android:id="@+id/widget_artist"
         android:layout_width="match_parent"
-        android:layout_height="40dp"
+        android:layout_height="44dp"
         android:layout_gravity="top|center_horizontal"
-        android:layout_marginTop="25dp"
+        android:layout_marginTop="24dp"
         android:scaleType="center" />
 
     <!--
@@ -92,22 +94,22 @@
     -->
     <ImageView
         android:id="@+id/widget_waveform"
-        android:layout_width="20dp"
-        android:layout_height="15dp"
+        android:layout_width="21dp"
+        android:layout_height="16dp"
         android:layout_gravity="top|end"
-        android:layout_marginTop="19.5dp"
-        android:layout_marginEnd="26dp"
+        android:layout_marginTop="19dp"
+        android:layout_marginEnd="24dp"
         android:src="@drawable/ic_waveform"
         android:contentDescription="@string/waveform"
         android:visibility="gone" />
 
     <ViewFlipper
         android:id="@+id/widget_waveform_flipper"
-        android:layout_width="20dp"
-        android:layout_height="15dp"
+        android:layout_width="21dp"
+        android:layout_height="16dp"
         android:layout_gravity="top|end"
-        android:layout_marginTop="19.5dp"
-        android:layout_marginEnd="26dp"
+        android:layout_marginTop="19dp"
+        android:layout_marginEnd="24dp"
         android:autoStart="true"
         android:flipInterval="40"
         android:alpha="0.95"
@@ -141,23 +143,23 @@
 
     <!--
       Progress Row — CardSpec.kt:36-47
-        centerY=67dp, height=28dp, marginTop = 67 - 28/2 = 53dp
+        centerY=68dp, height=28dp, marginTop = 68 - 28/2 = 54dp
         paddingH=22dp (CardSpec.kt:37)
         gap=9dp (CardSpec.kt:38)
-        BarHeight=6dp, trilho alpha=0.30 (#4DFFFFFF), preenchimento alpha=0.95 (#F2FFFFFF)
+        BarHeight=6.5dp, trilho alpha=0.30 (#4DFFFFFF), preenchimento alpha=0.95 (#F2FFFFFF)
     -->
     <LinearLayout
         android:id="@+id/widget_progress_row"
         android:layout_width="match_parent"
         android:layout_height="28dp"
         android:layout_gravity="top"
-        android:layout_marginTop="53dp"
+        android:layout_marginTop="54dp"
         android:layout_marginStart="22dp"
         android:layout_marginEnd="22dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <!-- Elapsed time (TextView, formato %d:%02d, CardSpec.TimeFontSize=11.5sp, TimeAlpha=0.85 -> #D9FFFFFF) -->
+        <!-- Elapsed time (TextView, formato %d:%02d, CardSpec.TimeFontSize=11.8sp, TimeAlpha=0.90 -> #E6FFFFFF) -->
         <TextView
             android:id="@+id/widget_elapsed"
             android:layout_width="38dp"
@@ -166,8 +168,8 @@
             android:fontFamily="@font/inter_semibold"
             android:includeFontPadding="false"
             android:text="0:00"
-            android:textColor="#D9FFFFFF"
-            android:textSize="11.5sp"
+            android:textColor="#E6FFFFFF"
+            android:textSize="11.8sp"
             android:maxLines="1" />
 
         <!-- Gap 9dp -->
@@ -175,17 +177,13 @@
             android:layout_width="9dp"
             android:layout_height="match_parent" />
 
-        <!-- ProgressBar (altura 6dp, BarHeight=6dp, CardSpec.kt:41) -->
-        <ProgressBar
+        <!-- Progress pill bitmap (ImageView, altura 6.5dp — Canvas-drawn pill via renderProgressBitmap) -->
+        <ImageView
             android:id="@+id/widget_progress"
-            style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="0dp"
-            android:layout_height="6dp"
+            android:layout_height="6.5dp"
             android:layout_weight="1"
-            android:max="1000"
-            android:progress="0"
-            android:indeterminate="false"
-            android:progressDrawable="@drawable/widget_progress" />
+            android:scaleType="fitXY" />
 
         <!-- Gap 9dp -->
         <FrameLayout
@@ -201,8 +199,8 @@
             android:fontFamily="@font/inter_semibold"
             android:includeFontPadding="false"
             android:text="--:--"
-            android:textColor="#D9FFFFFF"
-            android:textSize="11.5sp"
+            android:textColor="#E6FFFFFF"
+            android:textSize="11.8sp"
             android:maxLines="1" />
     </LinearLayout>
 
@@ -210,7 +208,7 @@
       Seek Overlay — Item D (W5)
         5 ImageButtons invisíveis sobrepostos à barra de progresso.
         Posição: mesma margem horizontal da progress row (22dp cada lado).
-        Altura: 28dp (altura total da progress row para facilitar o toque).
+        Altura: 32dp (expandida para facilitar o toque — BarTouchHeight=32dp).
         Frações centrais: 10%, 30%, 50%, 70%, 90% → cobrem cada 20% da barra.
         alpha=0: completamente invisíveis para o usuário.
         LinearLayout (horizontal) usado para weight funcionar.
@@ -219,9 +217,9 @@
     <LinearLayout
         android:id="@+id/widget_seek_overlay"
         android:layout_width="match_parent"
-        android:layout_height="28dp"
+        android:layout_height="32dp"
         android:layout_gravity="top"
-        android:layout_marginTop="53dp"
+        android:layout_marginTop="52dp"
         android:layout_marginStart="22dp"
         android:layout_marginEnd="22dp"
         android:orientation="horizontal">
@@ -279,29 +277,29 @@
 
     <!--
       Controls Row — CardSpec.kt:49-67
-        centerY=108dp, height=48dp, marginTop = 108 - 48/2 = 84dp
+        centerY=109dp, height=48dp, marginTop = 109 - 48/2 = 85dp
         5 botões posicionados dinamicamente em FrameLayout via setViewLayoutMargin
-        Frações CardSpec: 9% (Star), 29.5% (Previous), 50% (Play via ViewFlipper), 70.5% (Next), 91% (OpenSource).
+        Frações CardSpec: 9.5% (Star), 30% (Previous), 50% (Play), 70% (Next), 90.5% (OpenSource).
         Margins padrão calculadas para largura base de 334.58dp (grade 4x2 do Launcher):
-          Star:       334.58 * 0.090 - 24 = 6.1dp
-          Previous:   334.58 * 0.295 - 24 = 74.7dp
+          Star:       334.58 * 0.095 - 24 = 7.8dp
+          Previous:   334.58 * 0.300 - 24 = 76.4dp
           Play:       334.58 * 0.500 - 24 = 143.3dp
-          Next:       334.58 * 0.705 - 24 = 211.9dp
-          OpenSource: 334.58 * 0.910 - 24 = 280.5dp
+          Next:       334.58 * 0.700 - 24 = 210.2dp
+          OpenSource: 334.58 * 0.905 - 24 = 278.8dp
     -->
     <FrameLayout
         android:id="@+id/widget_controls"
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:layout_gravity="top"
-        android:layout_marginTop="84dp">
+        android:layout_marginTop="85dp">
 
         <ImageButton
             android:id="@+id/widget_star"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_gravity="top|start"
-            android:layout_marginStart="6.1dp"
+            android:layout_marginStart="7.8dp"
             android:background="@null"
             android:scaleType="center"
             android:padding="0dp"
@@ -313,7 +311,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_gravity="top|start"
-            android:layout_marginStart="74.7dp"
+            android:layout_marginStart="76.4dp"
             android:background="@null"
             android:scaleType="center"
             android:padding="0dp"
@@ -345,7 +343,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_gravity="top|start"
-            android:layout_marginStart="211.9dp"
+            android:layout_marginStart="210.2dp"
             android:background="@null"
             android:scaleType="center"
             android:padding="0dp"
@@ -357,7 +355,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_gravity="top|start"
-            android:layout_marginStart="280.5dp"
+            android:layout_marginStart="278.8dp"
             android:background="@null"
             android:scaleType="center"
             android:padding="0dp"

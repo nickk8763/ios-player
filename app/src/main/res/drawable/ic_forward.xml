@@ -1,9 +1,10 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="36dp"
-    android:height="21dp"
-    android:viewportWidth="36"
-    android:viewportHeight="21">
+    android:width="35dp"
+    android:height="19dp"
+    android:viewportWidth="35"
+    android:viewportHeight="19">
+    <!-- SF Symbols 'forward.fill': two rounded triangles touching seamlessly in center -->
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M 19.5,5.5 C 19.5,3.8 21.4,2.8 22.8,3.7 L 31.8,9.2 C 33.2,10.0 33.2,11.0 31.8,11.8 L 22.8,17.3 C 21.4,18.2 19.5,17.2 19.5,15.5 Z M 2.5,5.5 C 2.5,3.8 4.4,2.8 5.8,3.7 L 14.8,9.2 C 16.2,10.0 16.2,11.0 14.8,11.8 L 5.8,17.3 C 4.4,18.2 2.5,17.2 2.5,15.5 Z" />
+        android:pathData="M 1.60,3.60 L 1.60,15.40 Q 1.60,17.40 3.41,16.56 L 15.79,10.34 Q 17.60,9.50 15.79,8.66 L 3.41,2.44 Q 1.60,1.60 1.60,3.60 Z M 17.40,3.60 L 17.40,15.40 Q 17.40,17.40 19.21,16.56 L 31.59,10.34 Q 33.40,9.50 31.59,8.66 L 19.21,2.44 Q 17.40,1.60 17.40,3.60 Z" />
 </vector>

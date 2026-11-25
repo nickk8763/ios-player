@@ -1,13 +1,14 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="25dp"
-    android:height="25dp"
-    android:viewportWidth="25"
-    android:viewportHeight="25">
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- SF Symbols 'star' silhouette with rounded outer points -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="2"
+        android:strokeWidth="1.9"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M 12.5,2.7 L 15.03,9.02 L 21.82,9.47 L 16.59,13.83 L 18.26,20.43 L 12.5,16.80 L 6.74,20.43 L 8.41,13.83 L 3.18,9.47 L 9.97,9.02 Z" />
+        android:pathData="M 12.00,2.95 L 14.62,8.55 L 20.78,9.32 L 16.24,13.55 L 17.42,19.66 L 12.00,16.65 L 6.58,19.66 L 7.76,13.55 L 3.22,9.32 L 9.38,8.55 Z" />
 </vector>

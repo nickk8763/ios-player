@@ -206,6 +206,7 @@ class PlayerWidgetProvider : AppWidgetProvider() {
         currentActiveTitleBmp = null
         currentActiveArtistBmp = null
         cachedBackdrop = null
+        cachedGlassOverlay = null
         cachedArtworkSource = null
         cachedSharpPlay = null
         cachedMidBlurPlay = null
@@ -224,7 +225,7 @@ class PlayerWidgetProvider : AppWidgetProvider() {
          *   "A" = vidro puro (preenchimento 14% branco + borda em gradiente, mostrando o papel de parede)
          *   "B" = vidro sobre a cor da música (camada derivada da capa + véu, recortada a 22dp, com o vidro e a borda POR CIMA)
          */
-        const val MODO_FUNDO: String = "B"
+        const val MODO_FUNDO: String = "A"
 
         const val TICK_MS: Long = 1000L
         private const val PROGRESS_MAX = 1000
@@ -237,6 +238,7 @@ class PlayerWidgetProvider : AppWidgetProvider() {
 
         private var cachedArtworkSource: Bitmap? = null
         private var cachedBackdrop: Bitmap? = null
+        @Volatile private var cachedGlassOverlay: Pair<Float, Bitmap>? = null
 
         /**
          * W6: Plano B de fonte — Typeface Inter carregado de assets uma vez.
@@ -565,12 +567,18 @@ class PlayerWidgetProvider : AppWidgetProvider() {
         fun buildViews(context: Context, snapshot: WidgetSnapshot, widthDp: Float): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_player)
 
-            // Clip perimétrico dos cantos arredondados a 22dp (CardSpec.CardCornerRadius)
+            // Clip perimétrico dos cantos arredondados a 25dp (CardSpec.CardCornerRadius)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 views.setBoolean(R.id.widget_root, "setClipToOutline", true)
             }
 
-            // ── 1. Fundo do cartão (MODO_FUNDO B) ────────────────────────────────────────
+            // ── 0. Clear Liquid Glass overlay (bitmap) ───────────────────────────────
+            // MODO A: wallpaper visível através do vidro translúcido (sem backdrop opaco).
+            // O bitmap de vidro é desenhado sobre o wallpaper pelo sistema de composição.
+            val glassBmp = renderGlassOverlay(context, widthDp)
+            views.setImageViewBitmap(R.id.widget_glass_overlay, glassBmp)
+
+            // ── 1. Fundo do cartão (MODO_FUNDO A/B) ──────────────────────────────────────
             // Item B (W5): backdrop usa ViewFlipper com 2 ImageViews para crossfade.
             // O filho atual (backdropFlipperChild) já está visível; atualiza-se diretamente sem animar.
             // A troca de backdrop (crossfade) ocorre em refreshAll quando a artwork muda.
@@ -609,6 +617,9 @@ class PlayerWidgetProvider : AppWidgetProvider() {
 
             views.setImageViewBitmap(R.id.widget_title, titleBmp)
             views.setImageViewBitmap(R.id.widget_artist, artistBmp)
+            // Acessibilidade: contentDescription para leitores de tela (bitmap não carrega label automático)
+            views.setContentDescription(R.id.widget_title, titleText)
+            views.setContentDescription(R.id.widget_artist, artistText)
             // NÃO chamar setDisplayedChild aqui — evita animação espúria a cada updateAppWidget() completo.
 
             // ── 3. Waveform ───────────────────────────────────────────────────────────────
@@ -642,10 +653,10 @@ class PlayerWidgetProvider : AppWidgetProvider() {
                 val progress = ((position.toDouble() / duration.toDouble()) * PROGRESS_MAX)
                     .roundToInt()
                     .coerceIn(0, PROGRESS_MAX)
-                views.setProgressBar(R.id.widget_progress, PROGRESS_MAX, progress, false)
+                views.setImageViewBitmap(R.id.widget_progress, renderProgressBitmap(context, widthDp, progress))
             } else {
                 views.setTextViewText(R.id.widget_remaining, "--:--")
-                views.setProgressBar(R.id.widget_progress, PROGRESS_MAX, 0, false)
+                views.setImageViewBitmap(R.id.widget_progress, renderProgressBitmap(context, widthDp, 0))
             }
 
             // ── 5. Botões — posicionamento percentual ─────────────────────────────────────
@@ -697,6 +708,7 @@ class PlayerWidgetProvider : AppWidgetProvider() {
             val seekRequestCodes = intArrayOf(
                 REQUEST_SEEK_0, REQUEST_SEEK_1, REQUEST_SEEK_2, REQUEST_SEEK_3, REQUEST_SEEK_4
             )
+            val seekLabels = arrayOf("Seek 10%", "Seek 30%", "Seek 50%", "Seek 70%", "Seek 90%")
             for (i in seekIds.indices) {
                 views.setOnClickPendingIntent(
                     seekIds[i],
@@ -704,6 +716,7 @@ class PlayerWidgetProvider : AppWidgetProvider() {
                 )
                 // Habilitar seek apenas se houver sessão e duração conhecida
                 views.setBoolean(seekIds[i], "setEnabled", snapshot.hasSession && snapshot.durationMs > 0L)
+                views.setContentDescription(seekIds[i], seekLabels[i])
             }
 
             // ── 9. PendingIntents dos controles ──────────────────────────────────────────
@@ -818,7 +831,12 @@ class PlayerWidgetProvider : AppWidgetProvider() {
         fun buildFullViews(context: Context, snapshot: WidgetSnapshot, widthDp: Float): RemoteViews =
             buildViews(context, snapshot, widthDp)
 
-        fun buildTickViews(context: Context, position: Long, duration: Long): RemoteViews {
+        fun buildTickViews(
+            context: Context,
+            position: Long,
+            duration: Long,
+            widthDp: Float = 334.58f
+        ): RemoteViews {
             val partialViews = RemoteViews(context.packageName, R.layout.widget_player)
             partialViews.setTextViewText(R.id.widget_elapsed, formatTime(position))
             if (duration > 0L) {
@@ -827,10 +845,10 @@ class PlayerWidgetProvider : AppWidgetProvider() {
                 val progress = ((position.toDouble() / duration.toDouble()) * PROGRESS_MAX)
                     .roundToInt()
                     .coerceIn(0, PROGRESS_MAX)
-                partialViews.setInt(R.id.widget_progress, "setProgress", progress)
+                partialViews.setImageViewBitmap(R.id.widget_progress, renderProgressBitmap(context, widthDp, progress))
             } else {
                 partialViews.setTextViewText(R.id.widget_remaining, "--:--")
-                partialViews.setInt(R.id.widget_progress, "setProgress", 0)
+                partialViews.setImageViewBitmap(R.id.widget_progress, renderProgressBitmap(context, widthDp, 0))
             }
             return partialViews
         }
@@ -854,14 +872,14 @@ class PlayerWidgetProvider : AppWidgetProvider() {
             val position = snapshot.positionAt(now)
             val duration = snapshot.durationMs
 
-            val partialViews = buildTickViews(context, position, duration)
-
             if (DEBUG_DIAG) {
                 val elapsedStr = formatTime(position)
                 val remStr = if (duration > 0L) "\u2212" + formatTime((duration - position).coerceAtLeast(0L)) else "--:--"
-                Log.i("WIDGETDIAG", "PATH=tick REASON=tickProgress pos=$position elapsed='$elapsedStr' rem='$remStr' ids=${ids.contentToString()} actions=[setTextViewText(elapsed), setTextViewText(remaining), setInt(progress, setProgress)]")
+                Log.i("WIDGETDIAG", "PATH=tick REASON=tickProgress pos=$position elapsed='$elapsedStr' rem='$remStr' ids=${ids.contentToString()} actions=[setTextViewText(elapsed), setTextViewText(remaining), setImageViewBitmap(progress)]")
             }
             for (id in ids) {
+                val widthDp = getWidgetWidthDp(manager, id)
+                val partialViews = buildTickViews(context, position, duration, widthDp)
                 manager.partiallyUpdateAppWidget(id, partialViews)
             }
         }
@@ -920,22 +938,22 @@ class PlayerWidgetProvider : AppWidgetProvider() {
             }
 
         private fun getSharpPlayBitmap(context: Context): Bitmap =
-            cachedSharpPlay ?: renderControlIconBitmap(context, R.drawable.ic_play, 27f, 31f, 0f).also { cachedSharpPlay = it }
+            cachedSharpPlay ?: renderControlIconBitmap(context, R.drawable.ic_play, 25f, 29f, 0f).also { cachedSharpPlay = it }
 
         private fun getMidBlurPlayBitmap(context: Context): Bitmap =
-            cachedMidBlurPlay ?: renderControlIconBitmap(context, R.drawable.ic_play, 27f, 31f, 1.2f).also { cachedMidBlurPlay = it }
+            cachedMidBlurPlay ?: renderControlIconBitmap(context, R.drawable.ic_play, 25f, 29f, 1.2f).also { cachedMidBlurPlay = it }
 
         private fun getBlurPlayBitmap(context: Context): Bitmap =
-            cachedBlurPlay ?: renderControlIconBitmap(context, R.drawable.ic_play, 27f, 31f, 3.0f).also { cachedBlurPlay = it }
+            cachedBlurPlay ?: renderControlIconBitmap(context, R.drawable.ic_play, 25f, 29f, 3.0f).also { cachedBlurPlay = it }
 
         private fun getSharpPauseBitmap(context: Context): Bitmap =
-            cachedSharpPause ?: renderControlIconBitmap(context, R.drawable.ic_pause, 25f, 33f, 0f).also { cachedSharpPause = it }
+            cachedSharpPause ?: renderControlIconBitmap(context, R.drawable.ic_pause, 24f, 30f, 0f).also { cachedSharpPause = it }
 
         private fun getMidBlurPauseBitmap(context: Context): Bitmap =
-            cachedMidBlurPause ?: renderControlIconBitmap(context, R.drawable.ic_pause, 25f, 33f, 1.2f).also { cachedMidBlurPause = it }
+            cachedMidBlurPause ?: renderControlIconBitmap(context, R.drawable.ic_pause, 24f, 30f, 1.2f).also { cachedMidBlurPause = it }
 
         private fun getBlurPauseBitmap(context: Context): Bitmap =
-            cachedBlurPause ?: renderControlIconBitmap(context, R.drawable.ic_pause, 25f, 33f, 3.0f).also { cachedBlurPause = it }
+            cachedBlurPause ?: renderControlIconBitmap(context, R.drawable.ic_pause, 24f, 30f, 3.0f).also { cachedBlurPause = it }
 
         /**
          * Renderiza ícone de controle (Play/Pause) como Bitmap em um canvas fixo de 48dp x 48dp.
@@ -1012,6 +1030,7 @@ class PlayerWidgetProvider : AppWidgetProvider() {
                 typeface = getTypefaceSemiBold(context)
                 textSize = 16.5f * density  // 16.5sp
                 color = Color.WHITE
+                letterSpacing = -0.02f
                 if (blurRadiusDp > 0f) {
                     maskFilter = BlurMaskFilter(
                         (blurRadiusDp * density).coerceAtLeast(0.1f),
@@ -1062,8 +1081,9 @@ class PlayerWidgetProvider : AppWidgetProvider() {
             val density = context.resources.displayMetrics.density
             val paint = TextPaint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
                 typeface = getTypefaceRegular(context)
-                textSize = 14f * density   // 14sp
-                color = Color.argb((0.60f * 255).roundToInt(), 255, 255, 255)
+                textSize = 15.8f * density   // 15.8sp — iOS 26 reference: ArtistFontSize
+                color = Color.argb((0.78f * 255).roundToInt(), 255, 255, 255)  // alpha 0.78
+                letterSpacing = -0.02f
                 if (blurRadiusDp > 0f) {
                     maskFilter = BlurMaskFilter(
                         (blurRadiusDp * density).coerceAtLeast(0.1f),
@@ -1101,6 +1121,100 @@ class PlayerWidgetProvider : AppWidgetProvider() {
         // =========================================================================
 
         /**
+         * Renderiza o overlay de Clear Liquid Glass como Bitmap com bordas arredondadas a 25dp.
+         * Camadas (de baixo para cima):
+         *   1. Preenchimento semi-transparente: 16% branco #29FFFFFF (top) → escuro #1A0E1218 (bottom).
+         *   2. Borda especular 1px: LinearGradient top-left peak #8CFFFFFF → #1AFFFFFF → bottom-right #59FFFFFF.
+         * Sem blur real (impossível em RemoteViews de terceiros — apenas o sistema usa blurRadius).
+         * Referência: GlassSurfaceV1.kt, CardSpec.CardCornerRadius=25dp.
+         */
+        private fun renderGlassOverlay(context: Context, widthDp: Float): Bitmap {
+            cachedGlassOverlay?.let { (cachedW, bmp) ->
+                if (cachedW == widthDp && !bmp.isRecycled) return bmp
+            }
+            val density = context.resources.displayMetrics.density
+            val w = (widthDp * density).roundToInt().coerceAtLeast(1)
+            val h = (144f * density).roundToInt().coerceAtLeast(1)
+            val r = 25f * density
+
+            val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bmp)
+
+            // Camada 1: preenchimento gradiente (topo claro → fundo escuro)
+            val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                shader = LinearGradient(
+                    0f, 0f, 0f, h.toFloat(),
+                    intArrayOf(
+                        Color.argb(42, 255, 255, 255),   // #2AFFFFFF top ~16%
+                        Color.argb(26, 14, 18, 24),       // #1A0E1218 bottom
+                        Color.argb(41, 8, 10, 14)         // #29080A0E very bottom
+                    ),
+                    floatArrayOf(0f, 0.6f, 1f),
+                    Shader.TileMode.CLAMP
+                )
+            }
+            val rect = RectF(0f, 0f, w.toFloat(), h.toFloat())
+            canvas.drawRoundRect(rect, r, r, fillPaint)
+
+            // Camada 2: borda especular fina (0.75dp)
+            val strokeW = (0.75f * density).coerceAtLeast(1f)
+            val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = strokeW
+                shader = LinearGradient(
+                    0f, 0f, w.toFloat(), h.toFloat(),
+                    intArrayOf(
+                        Color.argb(140, 255, 255, 255),  // #8CFFFFFF top-left peak
+                        Color.argb(26, 255, 255, 255),   // #1AFFFFFF center fade
+                        Color.argb(89, 255, 255, 255)    // #59FFFFFF bottom-right gleam
+                    ),
+                    floatArrayOf(0f, 0.5f, 1f),
+                    Shader.TileMode.CLAMP
+                )
+            }
+            val inset = strokeW / 2f
+            canvas.drawRoundRect(
+                RectF(inset, inset, w - inset, h - inset),
+                r - inset, r - inset, borderPaint
+            )
+
+            cachedGlassOverlay = widthDp to bmp
+            return bmp
+        }
+
+        /**
+         * Renderiza a barra de progresso como bitmap pill (extremidades arredondadas = raio pleno).
+         * Trilho: 30% branco (#4DFFFFFF). Preenchimento: 96% branco (#F5FFFFFF).
+         * Referência: CardSpec.BarHeight=6.5dp, PlaybackProgress.kt.
+         */
+        private fun renderProgressBitmap(context: Context, widthDp: Float, progress: Int): Bitmap {
+            val density = context.resources.displayMetrics.density
+            // Descontar margem horizontal da progress row: 22dp cada lado + 38dp elapsed + 9dp gap + 42dp remaining + 9dp gap
+            val barWidthDp = widthDp - 22f - 22f - 38f - 9f - 42f - 9f
+            val w = (barWidthDp * density).roundToInt().coerceAtLeast(2)
+            val h = (6.5f * density).roundToInt().coerceAtLeast(1)
+            val r = h / 2f
+
+            val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bmp)
+
+            // Trilho: 30% branco
+            val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.argb(77, 255, 255, 255)  // #4DFFFFFF 30%
+            }
+            canvas.drawRoundRect(RectF(0f, 0f, w.toFloat(), h.toFloat()), r, r, trackPaint)
+
+            // Preenchimento: 96% branco
+            if (progress > 0) {
+                val fillW = (w.toFloat() * progress / PROGRESS_MAX).coerceAtLeast(h.toFloat())
+                val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = Color.argb(245, 255, 255, 255)  // #F5FFFFFF 96%
+                }
+                canvas.drawRoundRect(RectF(0f, 0f, fillW, h.toFloat()), r, r, fillPaint)
+            }
+
+            return bmp
+        }        /**
          * Gera a camada de fundo derivada da capa (MODO B):
          *   1. Camada base sólida #0B0C10 (BackgroundInk, PlayerScreen.kt:44, 62).
          *   2. Capa com escala 1.25x (CardSpec.ArtworkBackgroundScale, PlayerScreen.kt:80-81),
@@ -1183,7 +1297,7 @@ class PlayerWidgetProvider : AppWidgetProvider() {
             val masked = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val maskCanvas = Canvas(masked)
             val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-            val radiusPx = (22f * (width / 352f))
+            val radiusPx = (25f * (width / 352f))
             maskCanvas.drawRoundRect(RectF(0f, 0f, width.toFloat(), height.toFloat()), radiusPx, radiusPx, maskPaint)
             maskPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
             maskCanvas.drawBitmap(output, 0f, 0f, maskPaint)
@@ -1229,7 +1343,7 @@ class PlayerWidgetProvider : AppWidgetProvider() {
             val masked = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val maskCanvas = Canvas(masked)
             val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-            val radiusPx = (22f * (width / 352f))
+            val radiusPx = (25f * (width / 352f))
             maskCanvas.drawRoundRect(RectF(0f, 0f, width.toFloat(), height.toFloat()), radiusPx, radiusPx, maskPaint)
             maskPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
             maskCanvas.drawBitmap(output, 0f, 0f, maskPaint)
