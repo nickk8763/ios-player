@@ -1,6 +1,9 @@
 package com.nickk.iosglassplayer.ui
 
 import android.os.SystemClock
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -31,9 +34,9 @@ import com.nickk.iosglassplayer.media.TrackInfo
 import kotlinx.coroutines.delay
 
 /**
- * Real progress: the live position is extrapolated from PlaybackState while playing and ticks
- * inside this composable only, so the rest of the screen does not recompose every 250 ms.
- * Seeking is enabled only when the session advertises ACTION_SEEK_TO and the duration is known.
+ * Real progress com animação de expansão e retração fluida Apple HIG / SwiftUI:
+ * Ao arrastar a barra (scrubbing), a altura se expande organicamente de 6.5dp para 9.5dp
+ * com mola amortecida (Spring stiffness MediumLow, dampingRatio 0.78f).
  */
 @Composable
 fun PlaybackProgress(track: TrackInfo, onSeek: (Long) -> Unit, modifier: Modifier = Modifier) {
@@ -54,13 +57,24 @@ fun PlaybackProgress(track: TrackInfo, onSeek: (Long) -> Unit, modifier: Modifie
     val fraction = dragFraction ?: if (durationKnown) (positionMs.toFloat() / duration).coerceIn(0f, 1f) else 0f
     val shownMs = dragFraction?.let { (it * duration).toLong() } ?: positionMs
 
+    val isDragging = dragFraction != null
+    // Apple Spring Animation para a barra de progresso (scrubbing expansion)
+    val animatedHeight by animateDpAsState(
+        targetValue = if (isDragging) 9.5.dp else 6.5.dp,
+        animationSpec = spring(
+            dampingRatio = 0.78f,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "scrubbing-bar-height"
+    )
+
     val textColor = Color(0xFFCBCDD4).copy(alpha = 0.9f)
 
     Column(modifier) {
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(28.dp)
+                .height(32.dp)
                 .pointerInput(seekable, duration) {
                     if (!seekable) return@pointerInput
                     detectHorizontalDragGestures(
@@ -79,10 +93,10 @@ fun PlaybackProgress(track: TrackInfo, onSeek: (Long) -> Unit, modifier: Modifie
                 },
             contentAlignment = Alignment.Center
         ) {
-            Canvas(Modifier.fillMaxWidth().height(if (dragFraction != null) 9.dp else 6.dp)) {
+            Canvas(Modifier.fillMaxWidth().height(animatedHeight)) {
                 val corner = CornerRadius(size.height / 2f)
                 drawRoundRect(Color.White.copy(alpha = 0.28f), size = size, cornerRadius = corner)
-                drawRoundRect(Color.White.copy(alpha = 0.92f), size = Size(size.width * fraction, size.height), cornerRadius = corner)
+                drawRoundRect(Color.White.copy(alpha = 0.94f), size = Size(size.width * fraction, size.height), cornerRadius = corner)
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

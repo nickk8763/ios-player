@@ -4,17 +4,25 @@ import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,8 +54,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -64,8 +72,11 @@ private val Milk = Color(0xFFF7F7FA)
 private val Muted = Color(0xFFCBCDD4)
 
 /**
- * Phase-1 layout: same provisional look as the prototype, now driven by real state.
- * Proportions/typography are NOT yet matched to an iOS 26 reference screenshot (none supplied).
+ * PlayerScreen inspirado nos padrões fluidos de animação do iOS e open-swiftui-animations:
+ * - Album artwork scaling responsivo ao playback (playing: 1.0f escala plena, paused: 0.85f escala retraída)
+ * - Transição fluida de play/pause com escala elástica + fade
+ * - Transição fluida de títulos e artistas com AnimatedContent
+ * - Feedback táctil orgânico com mola amortecida Apple HIG (dampingRatio 0.72f, stiffness MediumLow)
  */
 @Composable
 fun PlayerScreen(hasAccess: Boolean) {
@@ -78,6 +89,16 @@ fun PlayerScreen(hasAccess: Boolean) {
     fun report(sent: Boolean) {
         if (!sent) Toast.makeText(context, noSession, Toast.LENGTH_SHORT).show()
     }
+
+    // Escala da capa ao tocar / pausar (física Apple: 1.0f quando tocando, 0.85f recolhido quando pausado)
+    val artworkScale by animateFloatAsState(
+        targetValue = if (track.isPlaying) 1.0f else 0.86f,
+        animationSpec = spring(
+            dampingRatio = 0.76f,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "album-art-scale"
+    )
 
     Box(Modifier.fillMaxSize().background(Ink)) {
         if (artwork != null) {
@@ -107,36 +128,78 @@ fun PlayerScreen(hasAccess: Boolean) {
             )
             Spacer(Modifier.height(24.dp))
 
+            // Capa com transição de escala de mola Apple
             Box(
-                Modifier.fillMaxWidth().aspectRatio(1f)
-                    .shadow(30.dp, RoundedCornerShape(28.dp)).clip(RoundedCornerShape(28.dp))
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .graphicsLayer {
+                        scaleX = artworkScale
+                        scaleY = artworkScale
+                    }
+                    .shadow(30.dp, RoundedCornerShape(28.dp))
+                    .clip(RoundedCornerShape(28.dp))
                     .border(1.dp, Color.White.copy(alpha = 0.26f), RoundedCornerShape(28.dp))
             ) {
-                if (artwork != null) {
-                    Image(
-                        artwork.asImageBitmap(), stringResource(R.string.album_artwork),
-                        contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Image(
-                        painterResource(R.drawable.ic_music_note), null,
-                        contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
-                    )
+                AnimatedContent(
+                    targetState = artwork,
+                    transitionSpec = {
+                        (fadeIn(spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessLow)) +
+                                scaleIn(initialScale = 0.94f, animationSpec = spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessLow)))
+                            .togetherWith(
+                                fadeOut(spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessLow)) +
+                                        scaleOut(targetScale = 1.04f, animationSpec = spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessLow))
+                            )
+                    },
+                    label = "artwork-crossfade"
+                ) { currentArt ->
+                    if (currentArt != null) {
+                        Image(
+                            currentArt.asImageBitmap(), stringResource(R.string.album_artwork),
+                            contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Image(
+                            painterResource(R.drawable.ic_music_note), null,
+                            contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
 
             Spacer(Modifier.height(25.dp))
             Column(Modifier.fillMaxWidth()) {
-                Text(
-                    track.title.ifBlank { stringResource(R.string.nothing_playing) },
-                    color = Milk, fontSize = 23.sp, lineHeight = 27.sp, fontWeight = FontWeight.Bold,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis
-                )
+                AnimatedContent(
+                    targetState = track.title.ifBlank { stringResource(R.string.nothing_playing) },
+                    transitionSpec = {
+                        (fadeIn(spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)) +
+                                scaleIn(initialScale = 0.96f, animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)))
+                            .togetherWith(
+                                fadeOut(spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow))
+                            )
+                    },
+                    label = "title-animation"
+                ) { titleText ->
+                    Text(
+                        titleText,
+                        color = Milk, fontSize = 23.sp, lineHeight = 27.sp, fontWeight = FontWeight.Bold,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis
+                    )
+                }
                 Spacer(Modifier.height(5.dp))
-                Text(
-                    if (track.hasSession) track.artist else stringResource(R.string.start_music),
-                    color = Muted, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
-                )
+                AnimatedContent(
+                    targetState = if (track.hasSession) track.artist else stringResource(R.string.start_music),
+                    transitionSpec = {
+                        fadeIn(spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow))
+                            .togetherWith(fadeOut(spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)))
+                    },
+                    label = "artist-animation"
+                ) { artistText ->
+                    Text(
+                        artistText,
+                        color = Muted, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
 
             Spacer(Modifier.height(19.dp))
@@ -197,7 +260,15 @@ private fun PlayerControl(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.92f else 1f, label = "control-press")
+    // Curva de mola tátil Apple (dampingRatio 0.72f, stiffness MediumLow)
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.88f else 1f,
+        animationSpec = spring(
+            dampingRatio = 0.72f,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "control-press"
+    )
     Box(
         modifier = Modifier
             .size(if (primary) 76.dp else 58.dp)
@@ -213,6 +284,24 @@ private fun PlayerControl(
             .semantics { contentDescription = label },
         contentAlignment = Alignment.Center
     ) {
-        Icon(painterResource(icon), contentDescription = null, tint = if (primary) Ink else Color.White, modifier = Modifier.size(iconSize))
+        AnimatedContent(
+            targetState = icon,
+            transitionSpec = {
+                (fadeIn(spring(dampingRatio = 0.80f, stiffness = Spring.StiffnessMedium)) +
+                        scaleIn(initialScale = 0.75f, animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium)))
+                    .togetherWith(
+                        fadeOut(spring(dampingRatio = 0.80f, stiffness = Spring.StiffnessMedium)) +
+                                scaleOut(targetScale = 0.75f, animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium))
+                    )
+            },
+            label = "control-icon-switch"
+        ) { currentIcon ->
+            Icon(
+                painterResource(currentIcon),
+                contentDescription = null,
+                tint = if (primary) Ink else Color.White,
+                modifier = Modifier.size(iconSize)
+            )
+        }
     }
 }

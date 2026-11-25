@@ -442,23 +442,56 @@ class PlayerWidgetProvider : AppWidgetProvider() {
                     val id = ids.firstOrNull() ?: ids[0]
                     getWidgetWidthDp(manager, id)
                 }
-                val sharpTitleBmp = renderTitleBitmap(context, newTitleText, widthDp, blurRadiusDp = 0f)
-                val sharpArtistBmp = renderArtistBitmap(context, newArtistText, widthDp, blurRadiusDp = 0f)
-
                 lastTitle = newTitleText
                 lastArtist = newArtistText
-                currentActiveTitleBmp = sharpTitleBmp
-                currentActiveArtistBmp = sharpArtistBmp
-                isTextTransitioning = false
+
                 textSharpRunnable?.let { mainHandler.removeCallbacks(it) }
 
-                val textViews = RemoteViews(context.packageName, R.layout.widget_player)
-                textViews.setImageViewBitmap(R.id.widget_title, sharpTitleBmp)
-                textViews.setImageViewBitmap(R.id.widget_artist, sharpArtistBmp)
-                for (id in ids) { manager.partiallyUpdateAppWidget(id, textViews) }
+                if (!isInitialTextLoad) {
+                    // Transição ótica Apple SwiftUI: Blur dissolve suave (blur 4dp -> sharp 0dp)
+                    // Simula a transição .transition(.blurFade) de open-swiftui-animations
+                    isTextTransitioning = true
+                    val blurTitleBmp = renderTitleBitmap(context, newTitleText, widthDp, blurRadiusDp = 3.5f)
+                    val blurArtistBmp = renderArtistBitmap(context, newArtistText, widthDp, blurRadiusDp = 3.0f)
+                    currentActiveTitleBmp = blurTitleBmp
+                    currentActiveArtistBmp = blurArtistBmp
+
+                    val blurViews = RemoteViews(context.packageName, R.layout.widget_player)
+                    blurViews.setImageViewBitmap(R.id.widget_title, blurTitleBmp)
+                    blurViews.setImageViewBitmap(R.id.widget_artist, blurArtistBmp)
+                    for (id in ids) { manager.partiallyUpdateAppWidget(id, blurViews) }
+
+                    // Em 100ms, foca perfeitamente no sharp bitmap
+                    textSharpRunnable = Runnable {
+                        val sharpTitle = renderTitleBitmap(context, newTitleText, widthDp, blurRadiusDp = 0f)
+                        val sharpArtist = renderArtistBitmap(context, newArtistText, widthDp, blurRadiusDp = 0f)
+                        currentActiveTitleBmp = sharpTitle
+                        currentActiveArtistBmp = sharpArtist
+                        isTextTransitioning = false
+
+                        val sharpViews = RemoteViews(context.packageName, R.layout.widget_player)
+                        sharpViews.setImageViewBitmap(R.id.widget_title, sharpTitle)
+                        sharpViews.setImageViewBitmap(R.id.widget_artist, sharpArtist)
+                        for (id in ids) { manager.partiallyUpdateAppWidget(id, sharpViews) }
+                        textSharpRunnable = null
+                    }
+                    mainHandler.postDelayed(textSharpRunnable!!, 100L)
+                } else {
+                    val sharpTitleBmp = renderTitleBitmap(context, newTitleText, widthDp, blurRadiusDp = 0f)
+                    val sharpArtistBmp = renderArtistBitmap(context, newArtistText, widthDp, blurRadiusDp = 0f)
+                    currentActiveTitleBmp = sharpTitleBmp
+                    currentActiveArtistBmp = sharpArtistBmp
+                    isTextTransitioning = false
+
+                    val textViews = RemoteViews(context.packageName, R.layout.widget_player)
+                    textViews.setImageViewBitmap(R.id.widget_title, sharpTitleBmp)
+                    textViews.setImageViewBitmap(R.id.widget_artist, sharpArtistBmp)
+                    for (id in ids) { manager.partiallyUpdateAppWidget(id, textViews) }
+                }
             }
 
-            // Atualiza ícone Play/Pause diretamente no ImageButton (sem ViewFlipper/inAnimation)
+            // Atualiza ícone Play/Pause com transição ótica fluida (blur 3dp -> 1.2dp -> 0dp)
+            // Inspirado nos padrões Apple SwiftUI transitions (blur fade micro-interaction)
             val playChild = if (snapshot.isPlaying) 1 else 0
             val playChanged = lastPlayChild >= 0 && playChild != lastPlayChild
             if (playChanged || lastPlayChild < 0) {
@@ -468,10 +501,40 @@ class PlayerWidgetProvider : AppWidgetProvider() {
                 playMidRunnable = null
                 playSharpRunnable = null
 
-                val playBmp = if (snapshot.isPlaying) getSharpPauseBitmap(context) else getSharpPlayBitmap(context)
-                val playViews = RemoteViews(context.packageName, R.layout.widget_player)
-                playViews.setImageViewBitmap(R.id.widget_play, playBmp)
-                for (id in ids) { manager.partiallyUpdateAppWidget(id, playViews) }
+                if (playChanged) {
+                    // Passo 1: Inicia com blur ótico (fade + blur rápido 3.0dp)
+                    val blurBmp = if (snapshot.isPlaying) getBlurPauseBitmap(context) else getBlurPlayBitmap(context)
+                    val blurViews = RemoteViews(context.packageName, R.layout.widget_player)
+                    blurViews.setImageViewBitmap(R.id.widget_play, blurBmp)
+                    for (id in ids) { manager.partiallyUpdateAppWidget(id, blurViews) }
+
+                    // Passo 2: Após 50ms, refina para mid-blur (1.2dp)
+                    val midRunnable = Runnable {
+                        val midBmp = if (snapshot.isPlaying) getMidBlurPauseBitmap(context) else getMidBlurPlayBitmap(context)
+                        val midViews = RemoteViews(context.packageName, R.layout.widget_player)
+                        midViews.setImageViewBitmap(R.id.widget_play, midBmp)
+                        for (id in ids) { manager.partiallyUpdateAppWidget(id, midViews) }
+                    }
+                    playMidRunnable = midRunnable
+                    mainHandler.postDelayed(midRunnable, 50L)
+
+                    // Passo 3: Após 120ms total, foca perfeitamente no sharp (0dp)
+                    val sharpRunnable = Runnable {
+                        val sharpBmp = if (snapshot.isPlaying) getSharpPauseBitmap(context) else getSharpPlayBitmap(context)
+                        val sharpViews = RemoteViews(context.packageName, R.layout.widget_player)
+                        sharpViews.setImageViewBitmap(R.id.widget_play, sharpBmp)
+                        for (id in ids) { manager.partiallyUpdateAppWidget(id, sharpViews) }
+                        playSharpRunnable = null
+                        playMidRunnable = null
+                    }
+                    playSharpRunnable = sharpRunnable
+                    mainHandler.postDelayed(sharpRunnable, 120L)
+                } else {
+                    val playBmp = if (snapshot.isPlaying) getSharpPauseBitmap(context) else getSharpPlayBitmap(context)
+                    val playViews = RemoteViews(context.packageName, R.layout.widget_player)
+                    playViews.setImageViewBitmap(R.id.widget_play, playBmp)
+                    for (id in ids) { manager.partiallyUpdateAppWidget(id, playViews) }
+                }
             }
 
             // Geração do backdrop fora da main thread se necessário
